@@ -573,7 +573,11 @@ class InstallerMain:
         if self.osins.needs_firmware:
             os.makedirs("vendorfw", exist_ok=True)
             pkg = asahi_firmware.core.FWPackage("vendorfw")
-            self.ins.collect_firmware(pkg)
+            try:
+                self.ins.collect_firmware(pkg)
+            except Exception:
+                logging.exception("Firmware collection failed")
+                p_warning("Firmware collection failed, continuing without (some) vendor firmware.")
             pkg.close()
             self.osins.firmware_package = pkg
 

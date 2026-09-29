@@ -455,40 +455,50 @@ class StubInstaller(PackageInstaller):
         logging.info("Attaching recovery ramdisk")
         subprocess.run(["hdiutil", "attach", "-quiet", "-readonly", "-mountpoint", "recovery", img],
                        check=True)
-        logging.info("Collecting WiFi firmware")
-        col = WiFiFWCollection("recovery/usr/share/firmware/wifi/")
-        pkg.add_files(sorted(col.files()))
-        logging.info("Collecting Bluetooth firmware")
-        col = BluetoothFWCollection("recovery/usr/share/firmware/bluetooth/")
-        pkg.add_files(sorted(col.files()))
-        logging.info("Collecting Multitouch firmware")
-        col = MultitouchFWCollection("fud_firmware/")
-        pkg.add_files(sorted(col.files()))
-        logging.info("Collecting ISP firmware")
-        col = ISPFWCollection("recovery/usr/sbin/")
-        pkg.add_files(sorted(col.files()))
-        logging.info("Collecting Kernel firmware")
-        col = KernelFWCollection(kernel_path)
-        pkg.add_files(sorted(col.files()))
-        logging.info("Collecting ALS firmware")
-        col = AlsFWCollection()
-        als_files = sorted(col.files())
-        pkg.add_files(als_files)
+        # macOS 27 moved the WiFi firmware into the BCMWLAN dext;
+        # usr/share/firmware/wifi lacks e.g. 4388C2 (M4) there
+        wifi_dext = "recovery/System/Library/DriverExtensions/com.apple.DriverKit-AppleBCMWLAN.dext/Firmware/"
+        if os.path.isdir(wifi_dext):
+            wifi = lambda: WiFiFWCollection(wifi_dext, skip_dirs=())
+        else:
+            wifi = lambda: WiFiFWCollection("recovery/usr/share/firmware/wifi/")
+        self.add_firmware(pkg, "WiFi", wifi)
+        self.add_firmware(pkg, "Bluetooth",
+                          lambda: BluetoothFWCollection("recovery/usr/share/firmware/bluetooth/"))
+        self.add_firmware(pkg, "Multitouch", lambda: MultitouchFWCollection("fud_firmware/"))
+        self.add_firmware(pkg, "ISP", lambda: ISPFWCollection("recovery/usr/sbin/"))
+        self.add_firmware(pkg, "Kernel", lambda: KernelFWCollection(kernel_path))
+        als_files = self.add_firmware(pkg, "ALS", AlsFWCollection)
         logging.info("Making fallback firmware archive")
-        with tempfile.TemporaryDirectory() as tmpdir:
-            os.makedirs(f"{tmpdir}/apple")
-            for name, fwf in als_files:
-                open(f"{tmpdir}/{name}", "wb").write(fwf.data)
-            subprocess.run(["tar", "czf", "all_firmware.tar.gz",
-                            "fud_firmware",
-                            "-C", "recovery/usr/share", "firmware",
-                            "-C", "../../usr/sbin", "appleh13camerad",
-                            "-C", os.path.dirname(FACTORY_DIR), os.path.basename(FACTORY_DIR),
-                            "-C", tmpdir, "apple",
-                            ], check=True)
-        self.copy_idata.append(("all_firmware.tar.gz", "all_firmware.tar.gz"))
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                os.makedirs(f"{tmpdir}/apple")
+                for name, fwf in als_files:
+                    open(f"{tmpdir}/{name}", "wb").write(fwf.data)
+                subprocess.run(["tar", "czf", "all_firmware.tar.gz",
+                                "fud_firmware",
+                                "-C", "recovery/usr/share", "firmware",
+                                "-C", "../../usr/sbin", "appleh13camerad",
+                                "-C", os.path.dirname(FACTORY_DIR), os.path.basename(FACTORY_DIR),
+                                "-C", tmpdir, "apple",
+                                ], check=True)
+            self.copy_idata.append(("all_firmware.tar.gz", "all_firmware.tar.gz"))
+        except Exception:
+            logging.exception("Failed to make fallback firmware archive")
+            p_warning("  Failed to make the fallback firmware archive, skipping it.")
         logging.info("Detaching recovery ramdisk")
         subprocess.run(["hdiutil", "detach", "-quiet", "recovery"])
+
+    def add_firmware(self, pkg, name, collection):
+        logging.info(f"Collecting {name} firmware")
+        try:
+            files = sorted(collection().files())
+        except Exception:
+            logging.exception(f"Failed to collect {name} firmware")
+            p_warning(f"  Failed to collect {name} firmware, skipping it.")
+            return []
+        pkg.add_files(files)
+        return files
 
     def collect_installer_data(self, path, merge_stub_info=False):
         p_progress("Collecting installer data...")
