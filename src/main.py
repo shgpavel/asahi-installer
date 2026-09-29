@@ -30,6 +30,7 @@ class IPSW:
     expert_only: bool
     devices: list
     url: str
+    basesystem_key: str = None
 
 @dataclass
 class Device:

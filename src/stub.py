@@ -23,6 +23,7 @@ class StubInstaller(PackageInstaller):
 
     def load_ipsw(self, ipsw_info):
         self.install_version = ipsw_info.version.split(maxsplit=1)[0]
+        self.basesystem_key = ipsw_info.basesystem_key
 
         base = os.environ.get("IPSW_BASE", None)
         url = ipsw_info.url
@@ -360,6 +361,12 @@ class StubInstaller(PackageInstaller):
         if self.is_ota:
             self.copy_recompress("AssetData/payloadv2/basesystem_patches/arm64eBaseSystem.dmg",
                                  os.path.join(basesystem_path, "arm64eBaseSystem.dmg"))
+        elif identity["Manifest"]["BaseSystem"]["Info"]["Path"].endswith(".aea"):
+            if not self.basesystem_key:
+                raise Exception("No key for the encrypted BaseSystem image of this IPSW")
+            self.copy_decrypt(identity["Manifest"]["BaseSystem"]["Info"]["Path"],
+                              os.path.join(basesystem_path, "arm64eBaseSystem.dmg"),
+                              self.basesystem_key)
         else:
             self.copy_compress(identity["Manifest"]["BaseSystem"]["Info"]["Path"],
                                os.path.join(basesystem_path, "arm64eBaseSystem.dmg"))

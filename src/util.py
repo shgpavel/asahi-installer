@@ -238,6 +238,29 @@ class PackageInstaller:
         istream = self.pkg.open(src)
         self.stream_compress(istream, size, path, crc=info.CRC)
 
+    def copy_decrypt(self, src, path, key):
+        # For AEA-encrypted images in IPSWs (macOS 15+)
+        info = self.pkg.getinfo(src)
+        tmp = os.path.abspath(os.path.basename(path))
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        p = subprocess.Popen(["aea", "decrypt", "-o", tmp, "-key-value", f"base64:{key}"],
+                             stdin=subprocess.PIPE)
+        with self.pkg.open(src) as istream:
+            self.fdcopy(istream, p.stdin, info.file_size)
+        p.stdin.close()
+        if p.wait() != 0:
+            raise Exception(f"Failed to decrypt {src}")
+        self.flush_progress()
+
+        crc = 0
+        with open(tmp, "rb") as fd:
+            while data := fd.read(CHUNK_SIZE * 256):
+                crc = zlib.crc32(data, crc)
+        with open(tmp, "rb") as istream:
+            self.stream_compress(istream, os.path.getsize(tmp), path, crc=crc)
+        os.remove(tmp)
+
     def stream_compress(self, istream, size, path, crc=None, sha1=None):
         with open(path, 'wb'):
             pass
