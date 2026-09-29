@@ -33,9 +33,10 @@ class WiFiFWCollection(object):
         "txcb": "txcap_blob",
         "sig": "sig",
     }
-    DIMS = ["C", "s", "P", "M", "V", "m", "A"]
-    def __init__(self, source_path):
+    DIMS = ["C", "s", "P", "M", "V", "m", "A", "F"]
+    def __init__(self, source_path, skip_dirs=("C-4388__s-C2",)):
         self.root = FWNode()
+        self.skip_dirs = skip_dirs
         self.load(source_path)
         self.prune()
 
@@ -46,9 +47,12 @@ class WiFiFWCollection(object):
             if "assert" in dirnames:
                 dirnames.remove("assert")
             # remove broken firmware dir in 14.6.1 IPSW
-            if "C-4388__s-C2" in dirnames:
-                dirnames.remove("C-4388__s-C2")
+            for i in self.skip_dirs:
+                if i in dirnames:
+                    dirnames.remove(i)
             subpath = os.path.relpath(dirpath, source_path)
+            if subpath == ".":
+                continue
             for name in sorted(filenames):
                 if not any(name.endswith("." + i) for i in self.EXTMAP):
                     continue
