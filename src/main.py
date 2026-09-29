@@ -50,6 +50,7 @@ CHIP_MIN_VER = {
     0x6030: "14.8.3",   # T6030, M3 Pro
     0x6031: "14.8.3",   # T6031, M3 Max (16-core)
     0x6034: "14.8.3",   # T6034, M3 Max (14-core)
+    0x8132: "15.1",     # T8132, M4
 }
 
 DEVICES = {
@@ -87,6 +88,7 @@ DEVICES = {
     "j516sap":  Device("14.8.3", False), # MacBook Pro (16-inch, M3 Pro, 2023)
     "j516cap":  Device("14.8.3", False), # MacBook Pro (16-inch, M3 Max, 2023)
     "j516map":  Device("14.8.3", False), # MacBook Pro (16-inch, M3 Max, 2023)
+    "j773gap":  Device("15.1", False),  # Mac mini (M4, 2024)
 }
 
 # Asahi Linux does not support running in a virtual machine, this option
@@ -124,6 +126,14 @@ IPSW_VERSIONS = [
          False,
          ["j433ap", "j434ap", "j504ap", "j613ap", "j615ap", "j514sap", "j514cap", "j514map", "j516sap", "j516cap", "j516map"],
          "https://updates.cdn-apple.com/2025FallFCS/patches/089-71124/49AD260A-D47F-4B5E-A793-30446187196E/com_apple_MobileAsset_MacSoftwareUpdate/f6d1ac9149f6a06401ff87fae5b262c420bfc5f7.zip"),
+    IPSW("27.0.1",
+         "27.0",
+         "mBoot-20457.1.29",
+         "26.1.434.0.0,0",
+         False,
+         ["j773gap"],
+         "https://updates.cdn-apple.com/2026FallFCS/59241290-5d51-4ca8-9df4-31624b9a4eac/UniversalMac_27.0.1_26A434_Restore.ipsw",
+         "CGiYpb1bvbXcmaX5yZzWxpgKzEe2deDkw5V9uJqUcQk="),
 ]
 
 class InstallerMain:
