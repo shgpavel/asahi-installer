@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: MIT
 
+STAGE1_SIZE = 0x1004000
+
 def build(src, dest, vars):
     if isinstance(vars, (list, tuple)):
         vars = b"".join(i.encode("ascii") + b"\n" for i in vars) + b"\0\0\0\0"
@@ -8,7 +10,9 @@ def build(src, dest, vars):
         m1n1_data = fd.read()
 
     data = m1n1_data + vars
-    data += bytes(-len(data) % 16384)
+    if len(data) > STAGE1_SIZE:
+        raise Exception(f"m1n1 stage 1 is larger than {STAGE1_SIZE:#x} bytes")
+    data += bytes(STAGE1_SIZE - len(data))
 
     with open(dest, "wb") as fd:
         fd.write(data)
