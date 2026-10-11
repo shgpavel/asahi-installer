@@ -7,8 +7,11 @@ def build(src, dest, vars):
     with open(src, "rb") as fd:
         m1n1_data = fd.read()
 
+    data = m1n1_data + vars
+    data += bytes(-len(data) % 16384)
+
     with open(dest, "wb") as fd:
-        fd.write(m1n1_data + vars)
+        fd.write(data)
 
 def extract_vars(src):
     with open(src, "rb") as fd:
